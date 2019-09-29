@@ -19,5 +19,6 @@
     :components ((:module "src"
                   :serial t
                   :components ((:file "package")
+                               (:file "domain")
                                (:file "mfa-tool")
                                (:file "capi-interface")))))
