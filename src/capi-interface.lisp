@@ -1,0 +1,145 @@
+(in-package :mfa-tool)
+
+(capi:define-interface mfa-tool ()
+  ((%default-account :initarg :default-account :reader default-account)
+   (%signin-url :accessor signin-url))
+  (:panes
+   (output-pane capi:collector-pane :reader output
+                                    :visible-min-width (list :character 80)
+                                    :visible-min-height (list :character 25))
+   (go-button capi:push-button :text "Go!" :callback 'go-on)
+   (mfa-input capi:text-input-pane
+              :title "MFA Token:"
+              :title-position :left
+              :max-characters 6
+              :callback 'go-on
+              :title-args '(:visible-min-width (:character 11))
+              :reader mfa-input)
+   (user-input capi:text-input-pane
+               :title "Email:"
+               :title-position :left
+               :text (format nil "~a@cj.com" (uiop/os:getenv "USER"))
+               :title-args '(:visible-min-width (:character 11))
+               :reader user-input)
+   (account-selector capi:option-pane
+                     :print-function 'car
+                     :items *accounts*
+                     :selected-item (rassoc %default-account *accounts*
+                                            :test 'equal)
+                     :selection-callback 'account-selected
+                     :callback-type :data
+                     :reader account-selector)
+   (action-buttons capi:push-button-panel
+                   :items '(:|Open Web Console|
+                            :|Authorize iTerm|)
+                   :selection-callback 'execute-action
+                   :callback-type :data-interface)
+   (listener-button capi:push-button
+                    :data :|Lisp REPL|
+                          :callback 'execute-action
+                          :callback-type :data-interface))
+  (:layouts
+   (button-layout capi:row-layout
+                  '(nil
+                    go-button))
+   (data-layout  capi:column-layout
+                 '(account-selector
+                   :separator
+                   user-input
+                   mfa-input
+                   button-layout))
+   (action-layout capi:row-layout
+                  `(listener-button
+                    nil
+                    action-buttons))
+   (right-layout capi:column-layout
+                 '(output-pane
+                   action-layout))
+   (main-layout capi:row-layout
+                '(data-layout 
+                  right-layout)))
+
+
+  (:default-initargs
+   :layout 'main-layout
+   :title "CJ AWS Util"))
+
+(defgeneric execute-action (action interface)
+  (:method ((action (eql :|Open Web Console|)) (interface mfa-tool))
+    (open-url (signin-url interface)))
+  (:method ((action (eql :|Authorize iTerm|)) (interface mfa-tool))
+    (uiop:run-program (format nil "osascript '~a'" 
+                              (probe-file 
+                               (merge-pathnames (make-pathname :name "AuthorizeShell" :type "scpt") 
+                                                (bundle-resource-root))))))
+  (:method ((action (eql :|Lisp REPL|)) (interface mfa-tool))
+    (capi:contain (make-instance 'capi:listener-pane)
+                  :best-width 1280
+                  :best-height 800)))
+
+(defun interface (&rest args &key default-account)
+  (declare (ignore default-account))
+  (let ((interface (apply 'make-instance 'mfa-tool args)))
+    (setf (capi:pane-initial-focus interface)
+          (slot-value interface 'mfa-input))
+    (capi:set-button-panel-enabled-items (slot-value interface 'action-buttons)
+                                         :set nil)
+    (capi:set-application-interface (make-instance 'my-app-interface))
+    (capi:display interface)))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun debugging (condition fun)
+    (declare (ignore fun))
+    (let ((*print-readably* nil)
+          (out (make-instance 'capi:collector-pane)))
+      (princ condition (capi:collector-pane-stream out))
+      (prin1 (mapcar 'restart-name
+                     (compute-restarts condition) )
+             (capi:collector-pane-stream out))
+      (capi:contain out)
+      (abort))))
+
+(capi:define-interface my-app-interface (capi:cocoa-default-application-interface)
+  ()
+  (:menus 
+   (edit-menu
+    "Edit"
+    (undo-component standard-edit-component selection-component)
+    :callback-type :interface)
+   (window-menu
+    "Window"
+    (("Close Window" 
+      :accelerator "accelerator-w"
+      :enabled-function 'close-active-screen-enabled
+      :callback 'close-active-screen
+      :callback-type nil)))
+   (standard-edit-component
+    :component
+    (("Cut" :callback 'capi:active-pane-cut
+            :enabled-function 'capi:active-pane-cut-p)
+     ("Copy" :callback 'capi:active-pane-copy
+             :enabled-function 'capi:active-pane-copy-p)
+     ("Paste" :callback 'capi:active-pane-paste
+              :enabled-function 'capi:active-pane-paste-p)))
+
+   (selection-component
+    :component
+    (("Select All" :callback 'capi:active-pane-select-all)))
+   
+   (undo-component
+    :component
+    (("Undo" :data :undo
+             :enabled-function 'capi:active-pane-undo-p
+             :callback 'capi:active-pane-undo))))
+
+  (:menu-bar edit-menu window-menu))
+
+(defun main ()
+  (setf *debugger-hook* 'debugging
+        *print-readably* nil
+        *accounts* (reprocess-accounts (load-accounts)))
+  (ubiquitous:restore :cj.mfa-tool)
+  (let ((*debugger-hook* 'debugging))
+    (setf aws:*session* (aws:make-session))
+    (interface :default-account 
+               (ubiquitous:value :default-account))))

@@ -1,0 +1,6 @@
+*~
+.*.sw?
+CJAWSAccess.app
+app.icns
+accounts.json
+accounts.yml
