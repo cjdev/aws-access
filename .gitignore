@@ -5,3 +5,5 @@ app.icns
 accounts.json
 accounts.yml
 *.64xfasl
+CJAWSAccess.dmg
+.DS_Store
