@@ -7,21 +7,41 @@
 
 (defparameter *user_management_account_id* 597974043991)
 
+(defun mfa-serial-number (account user)
+  (format nil "arn:aws:iam::~a:mfa/~a"
+          account
+          user))
+
+(defun role-arn (account role)
+  (format nil "arn:aws:iam::~a:role/cjorganization/~a"
+          account
+          role))
+
+(defun read-new-mfa-token ()
+  (format *query-io* "~&New MFA token: ")
+  (finish-output *query-io*)
+  (list (read-line *query-io*)))
 
 (defun do-auth (user role token account)
   (let ((mfa-serial-number
-          (format nil "arn:aws:iam::~a:mfa/~a"
-                  *user_management_account_id*
-                  user))
-        (role-arn
-          (format nil "arn:aws:iam::~a:role/cjorganization/~a"
-                  account
-                  role)))
-    (aws/sts:assume-role :role-arn role-arn
-                         :role-session-name (session-name)
-                         :serial-number mfa-serial-number
-                         :duration-seconds #.(* 12 60 60)
-                         :token-code token)))
+          (mfa-serial-number *user_management_account_id*
+                             user))
+        (role-arn (role-arn account role)))
+    (loop
+      (restart-case
+          (return
+            (aws/sts:assume-role :role-arn role-arn
+                                 :role-session-name (session-name)
+                                 :serial-number mfa-serial-number
+                                 :duration-seconds #.(* 12 60 60)
+                                 :token-code token))
+        (change-mfa-token (new-token)
+          :interactive read-new-mfa-token
+          (setf token new-token))))))
+
+(defun change-mfa-token (new-value)
+  (when (find-restart 'change-mfa-token)
+    (invoke-restart 'change-mfa-token new-value)))
 
 (defun get-url (params)
   (format nil "https://signin.aws.amazon.com/federation?Action=getSigninToken&Session=~a"
@@ -71,3 +91,17 @@
                                :url url)
                 :best-width 1280
                 :best-height 800))
+
+(defun sts-error-value (sts-response)
+  (let ((parsed-error (dom:first-child
+                       (cxml:parse sts-response
+                                   (cxml-dom:make-dom-builder)))))
+    (flet ((get-node (path)
+             (dom:node-value
+              (dom:first-child
+               (xpath:first-node
+                (xpath:with-namespaces (("" "https://sts.amazonaws.com/doc/2011-06-15/"))
+                  (xpath:evaluate path parsed-error)))))))
+      (values (get-node "//Error/Type")
+              (get-node "//Error/Code")
+              (get-node "//Error/Message")))))

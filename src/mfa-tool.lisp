@@ -27,7 +27,23 @@
         (user-name (capi:text-input-pane-text (user-input interface)))
         (account (cdr (capi:choice-selected-item (account-selector interface)))))
     (clear-cookies)
-    (multiple-value-bind (signin-token creds) (run-process account user-name token)
+    (multiple-value-bind (signin-token creds)
+        (handler-bind (((or dexador:http-request-forbidden
+                            dexador:http-request-bad-request)
+                         (lambda (c)
+                           (let ((message (nth-value 2 (sts-error-value (dex:response-body c)))))
+                             (multiple-value-bind (new-code completed)
+                                 (capi:prompt-for-string (format nil "~a~%Enter new MFA token:"
+                                                                 message)
+                                                         :ok-check (lambda (v)
+                                                                     (and (every 'digit-char-p v)
+                                                                          (= (length v) 6))))
+                               (if completed
+                                   (progn (setf (capi:text-input-pane-text (mfa-input interface))
+                                                new-code)
+                                          (change-mfa-token new-code))
+                                   (capi:abort-callback)))))))
+          (run-process account user-name token))
       (with-open-file (stream (make-pathname :name ""
                                              :type "cj-aws"
                                              :defaults (user-homedir-pathname))
@@ -59,12 +75,14 @@
            (capi:convert-to-screen))))
     (typep active-interface '(not mfa-tool))))
 
-(defun load-accounts ()
+(defun load-accounts (&optional account-source)
   (yason:parse
    (alexandria:read-file-into-string
-    (merge-pathnames (make-pathname :name "accounts"
-                                    :type "json")
-                     (bundle-resource-root)))))
+    (if account-source
+        account-source
+        (merge-pathnames (make-pathname :name "accounts"
+                                        :type "json")
+                         (bundle-resource-root))))))
 
 (defun reprocess-accounts (accounts)
   (let ((accounts (gethash "Accounts" accounts))

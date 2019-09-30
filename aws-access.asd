@@ -14,7 +14,9 @@
                  :serapeum
                  :ubiquitous
                  :uiop
-                 :yason)
+                 :yason
+                 :cxml
+                 :xpath)
     :serial t
     :components ((:module "src"
                   :serial t
