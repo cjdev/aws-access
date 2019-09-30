@@ -4,3 +4,4 @@ CJAWSAccess.app
 app.icns
 accounts.json
 accounts.yml
+*.64xfasl
