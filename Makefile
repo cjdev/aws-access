@@ -14,3 +14,8 @@ accounts.yml:
 app.icns: icon/icon.svg
 	$(MAKE) --directory=icon
 	cp icon/icon.icns app.icns
+
+deploy: CJAWSAccess.app
+	rm -rf dmg-src/CJAWSAccess.app
+	ditto CJAWSAccess.app dmg-src/CJAWSAccess.app
+	hdiutil create -volname "CJ AWS Access" -srcfolder dmg-src -ov -format UDZO CJAWSAccess.dmg

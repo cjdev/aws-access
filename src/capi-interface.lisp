@@ -49,8 +49,7 @@
                    mfa-input
                    button-layout))
    (action-layout capi:row-layout
-                  `(listener-button
-                    nil
+                  `(nil
                     action-buttons))
    (right-layout capi:column-layout
                  '(output-pane
