@@ -7,25 +7,29 @@
 
 (defparameter *developer-p* (equal "elangley" (uiop/os:getenv "USER")))
 
-(defun bundle-resource-root ()
-  (make-pathname :directory
-                 (pathname-directory
-                  (objc:invoke-into 'string
-                                    (objc:invoke "NSBundle" "mainBundle") 
-                                    "pathForResource:ofType:" "app" "icns"))))
+(defgeneric assumed-credentials (store))
+(defgeneric (setf assumed-credentials) (value store))
 
-(defun clear-cookies ()
-  (let ((cookie-storage (objc:invoke "NSHTTPCookieStorage" "sharedHTTPCookieStorage")))
-    (map nil
-         (lambda (cookie) 
-           (objc:invoke cookie-storage "deleteCookie:" cookie))
-         (objc:invoke-into 'array cookie-storage "cookies"))))
+(defun current-account (interface)
+  (cdr (capi:choice-selected-item (account-selector interface))))
+
+(defun credentials-for-account (interface account)
+   (gethash account 
+            (assumed-credentials interface)))
+(defun (setf credentials-for-account) (new-credentials interface account)
+  (setf (gethash account
+                 (assumed-credentials interface))
+        new-credentials))
+
+(defun current-credentials (interface)
+  (credentials-for-account interface
+                           (current-account interface)))
 
 (defun go-on (_ interface)
   (declare (ignore _))
   (let ((token (capi:text-input-pane-text (mfa-input interface)))
         (user-name (capi:text-input-pane-text (user-input interface)))
-        (account (cdr (capi:choice-selected-item (account-selector interface)))))
+        (account (current-account interface)))
     (clear-cookies)
     (multiple-value-bind (signin-token creds)
         (handler-bind (((or dexador:http-request-forbidden
@@ -58,8 +62,8 @@
                 (session-token creds)))
       (capi:set-button-panel-enabled-items (slot-value interface 'action-buttons)
                                            :set t)
-      (setf (signin-url interface) 
-            (url-from-signin-token signin-token)))))
+      (setf (credentials-for-account interface account) (session-credentials creds)
+            (signin-url interface) (url-from-signin-token signin-token)))))
 
 (defun close-active-screen ()
   (let ((active-interface

@@ -1,7 +1,8 @@
 (in-package :mfa-tool)
 
 (capi:define-interface mfa-tool ()
-  ((%default-account :initarg :default-account :reader default-account)
+  ((assumed-credentials :accessor assumed-credentials :initform (make-hash-table :test 'equal))
+   (%default-account :initarg :default-account :reader default-account)
    (%signin-url :accessor signin-url))
   (:panes
    (output-pane capi:collector-pane :reader output
@@ -31,7 +32,8 @@
                      :reader account-selector)
    (action-buttons capi:push-button-panel
                    :items '(:|Open Web Console|
-                            :|Authorize iTerm|)
+                            :|Authorize iTerm|
+                            :|Cloudformation Stacks|)
                    :selection-callback 'execute-action
                    :callback-type :data-interface)
    (listener-button capi:push-button
@@ -71,6 +73,11 @@
                               (probe-file 
                                (merge-pathnames (make-pathname :name "AuthorizeShell" :type "scpt") 
                                                 (bundle-resource-root))))))
+  (:method ((action (eql :|Cloudformation Stacks|)) (interface mfa-tool))
+   (let ((stack-interface (make-instance 'mfa-tool.stack:stack-interface
+                                         :credentials (current-credentials interface))))
+     (mfa-tool.store:dispatch stack-interface :|Get Stacks|)
+     (capi:display stack-interface)))
   (:method ((action (eql :|Lisp REPL|)) (interface mfa-tool))
     (capi:contain (make-instance 'capi:listener-pane)
                   :best-width 1280
@@ -132,6 +139,14 @@
              :callback 'capi:active-pane-undo))))
 
   (:menu-bar edit-menu window-menu))
+
+(defun start-in-repl (&optional (accounts (asdf:system-relative-pathname :aws-access "accounts.json")))
+  (ubiquitous:restore :cj.mfa-tool)
+  (setf aws:*session* (aws:make-session)
+        *print-readably* nil
+        *accounts* (reprocess-accounts (load-accounts accounts)))
+  (interface :default-account 
+             (ubiquitous:value :default-account)))
 
 (defun main ()
   (setf *debugger-hook* 'debugging

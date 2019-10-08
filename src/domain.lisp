@@ -1,7 +1,7 @@
 (in-package :mfa-tool)
 
 (defvar *accounts* ())
-
+(defvar *main-credentials* (aws-sdk:make-credentials))
 (defun session-name ()
   (format nil "bootstrap~d" (+ 5000 (random 5000))))
 
@@ -27,6 +27,7 @@
           (mfa-serial-number *user_management_account_id*
                              user))
         (role-arn (role-arn account role)))
+    (let ((aws-sdk:*session* (aws-sdk:make-session :credentials *main-credentials*))))
     (loop
       (restart-case
           (return
@@ -71,6 +72,13 @@
                                       ("sessionToken" . ,(^session-token)))) ))
    (url :reader url
         :initform (cells:c? (get-url (^url-params))))))
+
+(defgeneric session-credentials (source)
+  (:method ((source sts-result-handler))
+   (aws-sdk:make-credentials
+    :access-key-id (session-id source)
+    :secret-access-key (session-key source)
+    :session-token (session-token source))))
 
 (defun url-from-signin-token (signin-token)
   (format nil "https://signin.aws.amazon.com/federation?Action=login&Destination=https%3A%2F%2Fconsole.aws.amazon.com&SigninToken=~a"
