@@ -1,0 +1,8 @@
+{
+  "title": "CJAWSAccess",
+  "icon": "app.icns",
+  "contents": [
+    { "x": 448, "y": 72, "type": "link", "path": "/Applications" },
+    { "x": 192, "y": 72, "type": "file", "path": "CJAWSAccess.app" }
+  ]
+}
