@@ -90,7 +90,6 @@
           (slot-value interface 'mfa-input))
     (capi:set-button-panel-enabled-items (slot-value interface 'action-buttons)
                                          :set nil)
-    (capi:set-application-interface (make-instance 'my-app-interface))
     (capi:display interface)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -187,6 +186,7 @@
                                                              'capi:destroy interface))))))
 
 (defun main ()
+  (capi:set-application-interface (make-instance 'my-app-interface))
   (show-splash)
   (setf *debugger-hook* 'debugging
         *print-readably* nil
