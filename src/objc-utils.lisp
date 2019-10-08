@@ -7,6 +7,10 @@
                                     (objc:invoke "NSBundle" "mainBundle") 
                                     "pathForResource:ofType:" "app" "icns"))))
 
+(defun bundle-resource (relpath)
+  (merge-pathnames relpath
+                   (bundle-resource-root)))
+
 (defun clear-cookies ()
   (let ((cookie-storage (objc:invoke "NSHTTPCookieStorage" "sharedHTTPCookieStorage")))
     (map nil

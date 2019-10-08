@@ -148,7 +148,46 @@
   (interface :default-account 
              (ubiquitous:value :default-account)))
 
+
+(defun show-splash (&optional (image (bundle-resource "splash.png")))
+  (let* ((image (make-instance 'capi:image-pinboard-object
+                               :x 0 :y 0
+                               :image image
+                               :graphics-args '(:background :gray)))
+         (text (make-instance 'capi:item-pinboard-object
+                              :x 90 :y 450
+                              :text (format nil "( Cloud Access )")
+                              :graphics-args '(:font #s(graphics-ports:font
+                                                        :font-description #s(graphics-ports:font-description
+                                                                             :attributes (:name "LispM-Monospace"
+                                                                                          :family "LispM"
+                                                                                          :size 36.0d0
+                                                                                          :weight :demi
+                                                                                          :slant :roman
+                                                                                          :pitch :fixed))
+                                                        :device-font nil)
+                                               :background :transparent)))
+         (interface (destructuring-bind ((_ __ width height))
+                        (capi:screen-monitor-geometries (capi:convert-to-screen))
+                      (declare (ignore _ __))
+                      (make-instance 'capi:interface
+                                     :best-x (floor (- width 512) 2)
+                                     :best-y (floor (- height 512) 2)
+                                     :layout (make-instance 'capi:pinboard-layout
+                                                            :description (list image text))
+                                     :window-styles '(:borderless :internal-borderless :shadowed
+                                                      :movable-by-window-background :textured-background)))))
+
+
+    (prog1 (capi:display interface)
+      (mp:process-run-function "foo" ()
+                               (lambda ()
+                                 (sleep 2)
+                                 (capi:apply-in-pane-process interface
+                                                             'capi:destroy interface))))))
+
 (defun main ()
+  (show-splash)
   (setf *debugger-hook* 'debugging
         *print-readably* nil
         *accounts* (reprocess-accounts (load-accounts)))
