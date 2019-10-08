@@ -21,5 +21,12 @@ app.icns: icon/icon.svg
 	$(MAKE) --directory=icon
 	cp icon/icon.icns app.icns
 
-deploy: CJAWSAccess.app
+deploy: all cleanDmg
 	npx appdmg dmg.json CJAWSAccess.dmg
+
+cleanDmg:
+	rm -f CJAWSAccess.dmg
+
+clean: cleanDmg
+	rm -f accounts.json
+	rm -rf CJAWSAccess.app
