@@ -1,7 +1,6 @@
 (in-package :mfa-tool)
 
 (defvar *accounts* ())
-(defvar *main-credentials* (aws-sdk:make-credentials))
 (defun session-name ()
   (format nil "bootstrap~d" (+ 5000 (random 5000))))
 
@@ -27,7 +26,6 @@
           (mfa-serial-number *user_management_account_id*
                              user))
         (role-arn (role-arn account role)))
-    (let ((aws-sdk:*session* (aws-sdk:make-session :credentials *main-credentials*))))
     (loop
       (restart-case
           (return
