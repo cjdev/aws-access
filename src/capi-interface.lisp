@@ -139,13 +139,6 @@
 
   (:menu-bar edit-menu window-menu))
 
-(defun start-in-repl (&optional (accounts (asdf:system-relative-pathname :aws-access "accounts.json")))
-  (ubiquitous:restore :cj.mfa-tool)
-  (setf aws:*session* (aws:make-session)
-        *print-readably* nil
-        *accounts* (reprocess-accounts (load-accounts accounts)))
-  (interface :default-account 
-             (ubiquitous:value :default-account)))
 
 
 (defun show-splash (&optional (image (bundle-resource "splash.png")))
@@ -185,14 +178,19 @@
                                  (capi:apply-in-pane-process interface
                                                              'capi:destroy interface))))))
 
+(defun run (&optional accounts)
+  (setf *print-readably* nil
+        *accounts* (reprocess-accounts (load-accounts accounts))
+        aws:*session* (fwoar.credential-provider:make-aws-session))
+  (ubiquitous:restore :cj.mfa-tool)
+  (interface :default-account 
+             (ubiquitous:value :default-account)))
+
+(defun start-in-repl (&optional (accounts (asdf:system-relative-pathname :aws-access "accounts.json")))
+  (run accounts))
+
 (defun main ()
+  (setf *debugger-hook* 'debugging)
   (capi:set-application-interface (make-instance 'my-app-interface))
   (show-splash)
-  (setf *debugger-hook* 'debugging
-        *print-readably* nil
-        *accounts* (reprocess-accounts (load-accounts)))
-  (ubiquitous:restore :cj.mfa-tool)
-  (let ((*debugger-hook* 'debugging))
-    (setf aws:*session* (aws:make-session))
-    (interface :default-account 
-               (ubiquitous:value :default-account))))
+  (run))
