@@ -29,4 +29,5 @@
                              (:file "mfa-tool")
                              (:file "stack-store")
                              (:file "stack")
+                             (:file "credential-provider")
                              (:file "capi-interface")))))
