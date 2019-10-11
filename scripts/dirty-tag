@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+(git diff --quiet && git status --short &>>/dev/null) || echo -n -dirty
