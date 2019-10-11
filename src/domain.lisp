@@ -36,7 +36,8 @@
                                  :token-code token))
         (change-mfa-token (new-token)
           :interactive read-new-mfa-token
-          (setf token new-token))))))
+          (setf token new-token))
+        (continue ())))))
 
 (defun change-mfa-token (new-value)
   (when (find-restart 'change-mfa-token)
@@ -82,15 +83,41 @@
   (format nil "https://signin.aws.amazon.com/federation?Action=login&Destination=https%3A%2F%2Fconsole.aws.amazon.com&SigninToken=~a"
           signin-token))
 
+(defun read-new-aws-credentials ()
+  (serapeum:collecting
+    (fresh-line *query-io*)
+    (format *query-io* "Access Key?")
+    (finish-output *query-io*)
+    (collect (read-line *query-io*))
+    (format *query-io* "Secret Access Key?")
+    (finish-output *query-io*)
+    (collect (read-line *query-io*))))
+
 (defun run-process (account user token)
-  (let* ((api-result (cells:c-in (do-auth user "CJDeveloperAccessRole" token account)))
-         (parser (make-instance 'sts-result-handler :api-result api-result))
-         (federation-url (url parser))
-         (signin-token (gethash "SigninToken" 
-                                (yason:parse
-                                 (dexador:get federation-url)))))
-    (values signin-token
-            parser)))
+  (loop
+    (restart-bind ((set-aws-credentials (lambda (access-key-id secret-access-key)
+                                          (setf aws:*session*
+                                                (aws:make-session :credentials (aws:make-credentials
+                                                                                :access-key-id access-key-id
+                                                                                :secret-access-key secret-access-key
+                                                                                :session-token nil
+                                                                                :provider-name "restart-provider")))
+                                          (continue))
+                                        :interactive-function 'read-new-aws-credentials
+                                        :report-function (lambda (s)
+                                                           (princ "Supply new AWS credentials" s))
+                                        :test-function (lambda (c)
+                                                         (and (find-restart 'continue)
+                                                              (typep c 'aws:no-credentials)))))
+      (let* ((api-result (cells:c-in (do-auth user "CJDeveloperAccessRole" token account)))
+             (parser (make-instance 'sts-result-handler :api-result api-result))
+             (federation-url (url parser))
+             (signin-token (gethash "SigninToken" 
+                                    (yason:parse
+                                     (dexador:get federation-url)))))
+        (return-from run-process
+          (values signin-token
+                  parser))))))
 
 (defun open-url (url)
   (capi:contain (make-instance 'capi:browser-pane
