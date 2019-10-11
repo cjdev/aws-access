@@ -84,9 +84,7 @@
    (alexandria:read-file-into-string
     (if account-source
         account-source
-        (merge-pathnames (make-pathname :name "accounts"
-                                        :type "json")
-                         (bundle-resource-root))))))
+        (json-resource "accounts")))))
 
 (defun reprocess-accounts (accounts)
   (let ((accounts (gethash "Accounts" accounts))

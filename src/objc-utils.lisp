@@ -8,8 +8,13 @@
                                     "pathForResource:ofType:" "app" "icns"))))
 
 (defun bundle-resource (relpath)
-  (merge-pathnames relpath
+  (merge-pathnames (namestring relpath)
                    (bundle-resource-root)))
+
+(defun json-resource (path)
+  (bundle-resource
+   (merge-pathnames (make-pathname :type "json")
+                    path)))
 
 (defun clear-cookies ()
   (let ((cookie-storage (objc:invoke "NSHTTPCookieStorage" "sharedHTTPCookieStorage")))
