@@ -92,18 +92,6 @@
                                          :set nil)
     (capi:display interface)))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun debugging (condition fun)
-    (declare (ignore fun))
-    (let ((*print-readably* nil)
-          (out (make-instance 'capi:collector-pane)))
-      (princ condition (capi:collector-pane-stream out))
-      (prin1 (mapcar 'restart-name
-                     (compute-restarts condition) )
-             (capi:collector-pane-stream out))
-      (capi:contain out)
-      (abort))))
-
 (capi:define-interface my-app-interface (capi:cocoa-default-application-interface)
   ()
   (:menus 
@@ -186,8 +174,22 @@
   (interface :default-account 
              (ubiquitous:value :default-account)))
 
-(defun start-in-repl (&optional (accounts (asdf:system-relative-pathname :aws-access "accounts.json")))
+(defun start-in-repl
+    (&optional (accounts (asdf:system-relative-pathname :aws-access "accounts"
+                                                        :type "json")))
   (run accounts))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun debugging (condition fun)
+    (declare (ignore fun))
+    (let ((*print-readably* nil)
+          (out (make-instance 'capi:collector-pane)))
+      (princ condition (capi:collector-pane-stream out))
+      (prin1 (mapcar 'restart-name
+                     (compute-restarts condition) )
+             (capi:collector-pane-stream out))
+      (capi:contain out)
+      (abort))))
 
 (defun main ()
   (setf *debugger-hook* 'debugging)
