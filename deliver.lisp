@@ -22,7 +22,8 @@
                                       0 7)
                               (uiop:run-program (list "zsh" "scripts/dirty-tag") :output :string)))
          0
-         :KEEP-PRETTY-PRINTER t
+         :keep-conditions :all
+         :keep-pretty-printer t
          :interface :capi
          :keep-modules t
          :packages-to-keep-symbol-names '(:mfa-tool)

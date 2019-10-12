@@ -97,11 +97,12 @@
   (loop
     (restart-bind ((set-aws-credentials (lambda (access-key-id secret-access-key)
                                           (setf aws:*session*
-                                                (aws:make-session :credentials (aws:make-credentials
-                                                                                :access-key-id access-key-id
-                                                                                :secret-access-key secret-access-key
-                                                                                :session-token nil
-                                                                                :provider-name "restart-provider")))
+                                                (aws:make-session
+                                                 :credentials (aws:make-credentials
+                                                               :access-key-id access-key-id
+                                                               :secret-access-key secret-access-key
+                                                               :session-token nil
+                                                               :provider-name "restart-provider")))
                                           (continue))
                                         :interactive-function 'read-new-aws-credentials
                                         :report-function (lambda (s)

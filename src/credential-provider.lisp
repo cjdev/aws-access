@@ -1,8 +1,9 @@
-(defpackage :fwoar.credential-provider
+(defpackage :mfa-tool.credential-provider
   (:use :cl )
-  (:export
-   #:make-aws-session))
-(in-package :fwoar.credential-provider)
+  (:export #:make-aws-session
+           #:debug-provider
+           #:setup-default-chain))
+(in-package :mfa-tool.credential-provider)
 
 (defstruct hash-ref name hash-table)
 (defstruct leaf name value)
@@ -54,8 +55,7 @@
                                        :my-builder)))
 
 (defclass fwoar-provider (aws-sdk/credentials/base:provider)
-  ((file :initarg :file
-     :initform #P"~/.aws/credentials")
+  ((file :initarg :file :initform (error "must pass a file name"))
    (profile :initarg :profile
             :initform aws-sdk:*aws-profile*
             :accessor provider-profile)
@@ -69,7 +69,7 @@
                (parse-ini file)))))
 
 (defmethod aws-sdk/credentials/base:retrieve ((provider fwoar-provider))
-  (with-slots (retrievedp file) provider
+  (with-slots (retrievedp) provider
     (setf retrievedp nil)
     (let ((section (read-credentials provider)))
       (when section
@@ -80,8 +80,43 @@
          :session-token (gethash "aws_session_token" section)
          :provider-name "fwoar-provider")))))
 
+(defclass ubiquitous-provider (aws-sdk/credentials/base:provider)
+  ((retrievedp :initform nil)))
+
+(defmethod aws-sdk/credentials/base:retrieve ((provider ubiquitous-provider))
+  (when (and (ubiquitous:value :aws :access-key-id)
+             (ubiquitous:value :aws :secret-access-key))
+    (aws-sdk:make-credentials
+     :access-key-id (ubiquitous:value :aws :access-key-id)
+     :secret-access-key (ubiquitous:value :aws :secret-access-key)
+     :session-token (ubiquitous:value :aws :session-token)
+     :provider-name "ubiquitous-provider")))
+
+(defun save-ubiquitous-credentials (credentials)
+  (setf (ubiquitous:value :aws :access-key-id)
+        (aws-sdk/credentials/base:credentials-access-key-id credentials)
+
+        (ubiquitous:value :aws :secret-access-key)
+        (aws-sdk/credentials/base:credentials-secret-access-key credentials)
+
+        (ubiquitous:value :aws :session-token)
+        (aws-sdk/credentials/base:credentials-session-token credentials)))
+
 (defun make-aws-session ()
   (let ((aws-sdk/credentials::*chained-providers*
-          (list* (make-instance 'fwoar-provider)
-                 aws-sdk/credentials::*chained-providers*)))
+          (list (make-instance 'fwoar-provider :file (merge-pathnames ".aws/credentials"
+                                                                      (user-homedir-pathname)))
+                (make-instance 'ubiquitous-provider))))
     (aws:make-session :credentials (aws:default-aws-credentials))))
+
+(defun debug-provider (s)
+  (pprint (read-credentials (make-instance 'fwoar-provider
+                                           :file (merge-pathnames ".aws/credentials"
+                                                                  (user-homedir-pathname))))
+          s))
+
+(defun setup-default-chain ()
+  (setf aws-sdk/credentials::*chained-providers*
+        (list (make-instance 'fwoar-provider :file (merge-pathnames ".aws/credentials"
+                                                                    (user-homedir-pathname)))
+              (make-instance 'ubiquitous-provider))))

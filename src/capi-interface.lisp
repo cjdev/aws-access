@@ -169,7 +169,7 @@
 (defun run (&optional accounts)
   (setf *print-readably* nil
         *accounts* (reprocess-accounts (load-accounts accounts))
-        aws:*session* (fwoar.credential-provider:make-aws-session))
+        aws:*session* (mfa-tool.credential-provider:make-aws-session))
   (ubiquitous:restore :cj.mfa-tool)
   (interface :default-account 
              (ubiquitous:value :default-account)))
@@ -179,20 +179,42 @@
                                                         :type "json")))
   (run accounts))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun debugging (condition fun)
-    (declare (ignore fun))
-    (let ((*print-readably* nil)
-          (out (make-instance 'capi:collector-pane)))
-      (princ condition (capi:collector-pane-stream out))
-      (prin1 (mapcar 'restart-name
-                     (compute-restarts condition) )
-             (capi:collector-pane-stream out))
-      (capi:contain out)
-      (abort))))
+(defun debugging (condition fun)
+  (declare (ignore fun))
+  (let ((*print-readably* nil)
+        (out (make-instance 'capi:collector-pane)))
+    (princ condition (capi:collector-pane-stream out))
+    (prin1 (mapcar 'restart-name
+                   (compute-restarts condition) )
+           (capi:collector-pane-stream out))
+    (typecase condition
+      (aws-sdk:no-credentials
+       (fresh-line (capi:collector-pane-stream out))
+       (format (capi:collector-pane-stream out) "Credentials file ~:[doesn't~;does~] exist for me~%"
+               (probe-file (merge-pathnames ".aws/credentials"
+                                            (user-homedir-pathname))))
+       (when (probe-file (merge-pathnames ".aws/credentials"
+                                          (user-homedir-pathname)))
+         (princ (alexandria:read-file-into-string (merge-pathnames ".aws/credentials"
+                                                                   (user-homedir-pathname)))
+                (capi:collector-pane-stream out)))
+       (terpri (capi:collector-pane-stream out))
+       (mfa-tool.credential-provider:debug-provider (capi:collector-pane-stream out))
+       (terpri (capi:collector-pane-stream out))
+       (terpri)
+       ))
+    (dbg:output-backtrace :stream (capi:collector-pane-stream out))
+    (terpri)
+    (terpri)
+    (capi:contain out)
+    (dbg:log-bug-form "fail")
+    (abort)))
 
 (defun main ()
+  (mfa-tool.credential-provider:setup-default-chain)
+  (mfa-tool.pprint-setup:setup-pprint)
   (setf *debugger-hook* 'debugging)
   (capi:set-application-interface (make-instance 'my-app-interface))
   (show-splash)
+  (princ (user-homedir-pathname) *standard-output*)
   (run))
