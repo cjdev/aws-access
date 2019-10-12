@@ -10,7 +10,7 @@
                  :aws-sdk
                  :aws-sdk/services/sts
                  :cells
-                 :cl-yaml
+                 :fset
                  :cxml
                  :daydreamer
                  :fwoar-lisputils
@@ -22,7 +22,8 @@
     :serial t
     :components ((:module "src"
                   :serial t
-                  :components ((:file "package")
+                  :components ((:file "pprint-setup")
+                               (:file "package")
                                (:file "store")
                                (:file "aws-dispatcher")
                                (:file "domain")
