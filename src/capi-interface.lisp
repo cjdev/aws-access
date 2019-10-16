@@ -185,30 +185,14 @@
         (out (make-instance 'capi:collector-pane)))
     (princ condition (capi:collector-pane-stream out))
     (prin1 (mapcar 'restart-name
-                   (compute-restarts condition) )
+                   (compute-restarts condition))
            (capi:collector-pane-stream out))
-    (typecase condition
-      (aws-sdk:no-credentials
-       (fresh-line (capi:collector-pane-stream out))
-       (format (capi:collector-pane-stream out) "Credentials file ~:[doesn't~;does~] exist for me~%"
-               (probe-file (merge-pathnames ".aws/credentials"
-                                            (user-homedir-pathname))))
-       (when (probe-file (merge-pathnames ".aws/credentials"
-                                          (user-homedir-pathname)))
-         (princ (alexandria:read-file-into-string (merge-pathnames ".aws/credentials"
-                                                                   (user-homedir-pathname)))
-                (capi:collector-pane-stream out)))
-       (terpri (capi:collector-pane-stream out))
-       (mfa-tool.credential-provider:debug-provider (capi:collector-pane-stream out))
-       (terpri (capi:collector-pane-stream out))
-       (terpri)
-       ))
     (dbg:output-backtrace :stream (capi:collector-pane-stream out))
     (terpri)
     (terpri)
     (capi:contain out)
-    (dbg:log-bug-form "fail")
-    (abort)))
+    (dbg:log-bug-form "fail"))
+  (abort))
 
 (defun main ()
   (mfa-tool.credential-provider:setup-default-chain)

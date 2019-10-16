@@ -120,6 +120,10 @@
           (values signin-token
                   parser))))))
 
+(defun set-aws-credentials (access-key-id secret-access-key &optional condition)
+  (alexandria:when-let ((restart (find-restart 'set-aws-credentials condition)))
+    (invoke-restart restart access-key-id secret-access-key)))
+
 (defun open-url (url)
   (capi:contain (make-instance 'capi:browser-pane
                                :url url)

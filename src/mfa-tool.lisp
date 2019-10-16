@@ -1,7 +1,6 @@
 (in-package :mfa-tool)
 
 (defun account-selected (account)
-  (format t "~s" account)
   (setf (ubiquitous:value :default-account)
         (cdr account)))
 
@@ -25,6 +24,26 @@
   (credentials-for-account interface
                            (current-account interface)))
 
+
+(defmethod mfa-tool.store:execute ((store (eql :mfa-tool.debugger))
+                                   (action mfa-tool.read-credentials:credential-update))
+  (with-accessors ((access-key mfa-tool.read-credentials:access-key)
+                   (secret-access-key mfa-tool.read-credentials:secret-access-key)) action
+    (mfa-tool.credential-provider:save-ubiquitous-credentials
+     (aws-sdk:make-credentials :access-key-id access-key
+                               :secret-access-key secret-access-key
+                               :session-token nil))))
+
+(defun authenticate (account user-name token)
+  (handler-bind ((aws-sdk:no-credentials
+                   (lambda (c)
+                     (alexandria:when-let
+                         ((result (mfa-tool.read-credentials:prompt-for-aws-credentials :mfa-tool.debugger)))
+                       (set-aws-credentials (mfa-tool.read-credentials:access-key result)
+                                            (mfa-tool.read-credentials:secret-access-key result)
+                                            c)))))
+    (run-process account user-name token)))
+
 (defun go-on (_ interface)
   (declare (ignore _))
   (let ((token (capi:text-input-pane-text (mfa-input interface)))
@@ -47,19 +66,20 @@
                                                 new-code)
                                           (change-mfa-token new-code))
                                    (capi:abort-callback)))))))
-          (run-process account user-name token))
+          (authenticate account user-name token))
       (with-open-file (stream (make-pathname :name ""
                                              :type "cj-aws"
                                              :defaults (user-homedir-pathname))
                               :direction :output
                               :if-exists :rename
                               :if-does-not-exist :create)
-        (format (make-broadcast-stream stream
-                                       (capi:collector-pane-stream (output interface)))
-                "export AWS_ACCESS_KEY_ID='~a'~%export AWS_SECRET_ACCESS_KEY='~a'~%export AWS_SESSION_TOKEN='~a'~%"
-                (session-id creds)
-                (session-key creds)
-                (session-token creds)))
+        (let ((cred-stream (make-broadcast-stream stream
+                                                  (capi:collector-pane-stream (output interface)))))
+          (format cred-stream
+                  "export AWS_ACCESS_KEY_ID='~a'~%export AWS_SECRET_ACCESS_KEY='~a'~%export AWS_SESSION_TOKEN='~a'~%"
+                  (session-id creds)
+                  (session-key creds)
+                  (session-token creds))))
       (capi:set-button-panel-enabled-items (slot-value interface 'action-buttons)
                                            :set t)
       (setf (credentials-for-account interface account) (session-credentials creds)

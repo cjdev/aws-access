@@ -28,10 +28,11 @@
                                (:file "aws-dispatcher")
                                (:file "domain")
                                (:file "objc-utils")
+                               (:file "read-credentials")
+                               (:file "credential-provider")
                                (:file "mfa-tool")
                                (:file "stack-store")
                                (:file "stack")
-                               (:file "credential-provider")
                                (:file "capi-interface")))))
 
 (defsystem :aws-access/tests

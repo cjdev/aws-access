@@ -2,7 +2,8 @@
   (:use :cl )
   (:export #:make-aws-session
            #:debug-provider
-           #:setup-default-chain))
+           #:setup-default-chain
+           #:save-ubiquitous-credentials))
 (in-package :mfa-tool.credential-provider)
 
 (defstruct hash-ref name hash-table)
@@ -93,14 +94,16 @@
      :provider-name "ubiquitous-provider")))
 
 (defun save-ubiquitous-credentials (credentials)
-  (setf (ubiquitous:value :aws :access-key-id)
-        (aws-sdk/credentials/base:credentials-access-key-id credentials)
+  (prog1 credentials
+    (setf (ubiquitous:value :aws :access-key-id)
+          (aws-sdk/credentials/base:credentials-access-key-id credentials)
 
-        (ubiquitous:value :aws :secret-access-key)
-        (aws-sdk/credentials/base:credentials-secret-access-key credentials)
+          (ubiquitous:value :aws :secret-access-key)
+          (aws-sdk/credentials/base:credentials-secret-access-key credentials)
 
-        (ubiquitous:value :aws :session-token)
-        (aws-sdk/credentials/base:credentials-session-token credentials)))
+          (ubiquitous:value :aws :session-token)
+          (aws-sdk/credentials/base:credentials-session-token credentials))
+    (ubiquitous:offload)))
 
 (defun make-aws-session ()
   (let ((aws-sdk/credentials::*chained-providers*
