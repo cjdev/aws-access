@@ -22,8 +22,10 @@
     :serial t
     :components ((:module "src"
                   :serial t
-                  :components ((:file "pprint-setup")
-                               (:file "package")
+                  :components ((:file "package")
+                               (:file "utils")
+                               (:file "capi-utils")
+                               (:file "pprint-setup")
                                (:file "store")
                                (:file "aws-dispatcher")
                                (:file "domain")

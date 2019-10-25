@@ -1,3 +1,13 @@
+(defun utf-8-file-encoding (pathname ef-spec buffer length)
+  (declare (ignore pathname buffer length))
+  (system:merge-ef-specs ef-spec :utf-8))
+
+(setq system:*file-encoding-detection-algorithm*
+      (substitute 'utf-8-file-encoding
+                  'system:locale-file-encoding
+                  system:*file-encoding-detection-algorithm*))
+(set-default-character-element-type 'simple-char)
+
 (in-package :cl-user)
 (setf *default-pathname-defaults*
  (make-pathname :directory (pathname-directory *load-pathname*)))
