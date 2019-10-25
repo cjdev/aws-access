@@ -6,15 +6,6 @@
 
 (defparameter *user_management_account_id* 597974043991)
 
-(defun mfa-serial-number (account user)
-  (format nil "arn:aws:iam::~a:mfa/~a"
-          account
-          user))
-
-(defun role-arn (account role)
-  (format nil "arn:aws:iam::~a:role/cjorganization/~a"
-          account
-          role))
 (defclass cj-organization-role ()
   ((account :initarg :account
             :reader account
@@ -51,23 +42,17 @@
   (finish-output *query-io*)
   (list (read-line *query-io*)))
 
-(defun do-auth (user role token account)
-  (let ((mfa-serial-number
-          (mfa-serial-number *user_management_account_id*
-                             user))
-        (role-arn (role-arn account role)))
-    (loop
-      (restart-case
-          (return
-            (aws/sts:assume-role :role-arn role-arn
-                                 :role-session-name (session-name)
-                                 :serial-number mfa-serial-number
-                                 :duration-seconds #.(* 12 60 60)
-                                 :token-code token))
-        (change-mfa-token (new-token)
-          :interactive read-new-mfa-token
-          (setf token new-token))
-        (continue ())))))
+(defun do-auth (user role token)
+  (with-retry (let ((mfa-serial-number (arn-for :mfa *user_management_account_id* user))
+                    (role-arn (cj-organization-role-arn role)))
+                (aws/sts:assume-role :role-arn role-arn
+                                     :role-session-name (session-name)
+                                     :serial-number mfa-serial-number
+                                     :duration-seconds #.(* 12 60 60)
+                                     :token-code token))
+    (change-mfa-token (new-token)
+                      :interactive read-new-mfa-token
+                      (setf token new-token))))
 
 (defun change-mfa-token (new-value)
   (when (find-restart 'change-mfa-token)
@@ -104,10 +89,10 @@
 
 (defgeneric session-credentials (source)
   (:method ((source sts-result-handler))
-   (aws-sdk:make-credentials
-    :access-key-id (session-id source)
-    :secret-access-key (session-key source)
-    :session-token (session-token source))))
+    (aws-sdk:make-credentials
+     :access-key-id (session-id source)
+     :secret-access-key (session-key source)
+     :session-token (session-token source))))
 
 (defun url-from-signin-token (signin-token)
   (format nil "https://signin.aws.amazon.com/federation?Action=login&Destination=https%3A%2F%2Fconsole.aws.amazon.com&SigninToken=~a"
@@ -123,42 +108,33 @@
     (finish-output *query-io*)
     (collect (read-line *query-io*))))
 
-(defun run-process (account user token)
-  (loop
-    (restart-bind ((set-aws-credentials (lambda (access-key-id secret-access-key)
-                                          (setf aws:*session*
-                                                (aws:make-session
-                                                 :credentials (aws:make-credentials
-                                                               :access-key-id access-key-id
-                                                               :secret-access-key secret-access-key
-                                                               :session-token nil
-                                                               :provider-name "restart-provider")))
-                                          (continue))
-                                        :interactive-function 'read-new-aws-credentials
-                                        :report-function (lambda (s)
-                                                           (princ "Supply new AWS credentials" s))
-                                        :test-function (lambda (c)
-                                                         (and (find-restart 'continue)
-                                                              (typep c 'aws:no-credentials)))))
-      (let* ((api-result (cells:c-in (do-auth user "CJDeveloperAccessRole" token account)))
-             (parser (make-instance 'sts-result-handler :api-result api-result))
-             (federation-url (url parser))
-             (signin-token (gethash "SigninToken" 
-                                    (yason:parse
-                                     (dexador:get federation-url)))))
-        (return-from run-process
-          (values signin-token
-                  parser))))))
+(defun run-process (user role token)
+  (with-retry* ((set-aws-credentials (lambda (access-key-id secret-access-key)
+                                       (setf aws:*session*
+                                             (aws:make-session
+                                              :credentials (aws:make-credentials
+                                                            :access-key-id access-key-id
+                                                            :secret-access-key secret-access-key
+                                                            :session-token nil
+                                                            :provider-name "restart-provider")))
+                                       (continue))
+                                     :interactive-function 'read-new-aws-credentials
+                                     :report-function (lambda (s)
+                                                        (princ "Supply new AWS credentials" s))
+                                     :test-function (lambda (c)
+                                                      (and (find-restart 'continue)
+                                                           (typep c 'aws:no-credentials)))))
+    (let* ((api-result (cells:c-in (do-auth user role token)))
+           (parser (make-instance 'sts-result-handler :api-result api-result))
+           (federation-url (url parser))
+           (signin-token (gethash "SigninToken" 
+                                  (yason:parse
+                                   (dexador:get federation-url)))))
+      (values signin-token
+              parser))))
 
 (defun set-aws-credentials (access-key-id secret-access-key &optional condition)
-  (alexandria:when-let ((restart (find-restart 'set-aws-credentials condition)))
-    (invoke-restart restart access-key-id secret-access-key)))
-
-(defun open-url (url)
-  (capi:contain (make-instance 'capi:browser-pane
-                               :url url)
-                :best-width 1280
-                :best-height 800))
+  (safely-invoke-restart 'set-aws-credentials condition access-key-id secret-access-key))
 
 (defun sts-error-value (sts-response)
   (let ((parsed-error (dom:first-child

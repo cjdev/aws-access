@@ -34,7 +34,7 @@
                                :secret-access-key secret-access-key
                                :session-token nil))))
 
-(defun authenticate (account user-name token)
+(defun authenticate (user-name role token)
   (handler-bind ((aws-sdk:no-credentials
                    (lambda (c)
                      (alexandria:when-let
@@ -42,7 +42,9 @@
                        (set-aws-credentials (mfa-tool.read-credentials:access-key result)
                                             (mfa-tool.read-credentials:secret-access-key result)
                                             c)))))
-    (run-process account user-name token)))
+    (run-process user-name
+                 role
+                 token)))
 
 (defun go-on (_ interface)
   (declare (ignore _))
@@ -66,7 +68,9 @@
                                                 new-code)
                                           (change-mfa-token new-code))
                                    (capi:abort-callback)))))))
-          (authenticate account user-name token))
+          (authenticate user-name
+                        (cj-developer-role account)
+                        token))
       (with-open-file (stream (make-pathname :name ""
                                              :type "cj-aws"
                                              :defaults (user-homedir-pathname))
