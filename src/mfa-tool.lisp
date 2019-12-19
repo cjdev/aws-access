@@ -114,8 +114,9 @@
   (let ((accounts (gethash "Accounts" accounts))
         (result ()))
     (mapc (lambda (account)
-            (push (cons (format nil "~a (~a)" 
+            (push (cons (format nil "~a: ~a (~a)" 
                                 (gethash "Name" account)
+                                (gethash "Id" account)
                                 (gethash "Type" account))
                         (gethash "Id" account))
                   result))

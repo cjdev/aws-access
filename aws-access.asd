@@ -28,6 +28,7 @@
                                (:file "pprint-setup")
                                (:file "store")
                                (:file "aws-dispatcher")
+                               (:file "aws-utils")
                                (:file "domain")
                                (:file "objc-utils")
                                (:file "read-credentials")
