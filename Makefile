@@ -12,10 +12,11 @@ CJAWSAccess.app: deliver.lisp src/*.lisp aws-access.asd addFonts.patch
 
 assets/accounts.json: accounts.yml
 	./flip-yaml.lisp accounts.yml
-	cp accounts.json assets/
+	mv accounts.json assets/
+	rm accounts.yml
 
 accounts.yml:
-	git archive --format=tar --remote=git@gitlab.cj.com:operations-chapter/aws-department.git heads/master -- accounts.yaml | tar xO accounts.yaml > ~/accounts.yml
+	git archive --format=tar --remote=git@gitlab.cj.com:operations-chapter/aws-department.git heads/master -- accounts.yaml | tar xO accounts.yaml > accounts.yml
 
 app.icns: icon/icon.svg
 	$(MAKE) --directory=icon
