@@ -57,7 +57,7 @@
                  '(output-pane
                    action-layout))
    (main-layout capi:row-layout
-                '(data-layout 
+                '(data-layout
                   right-layout)))
 
 
@@ -100,14 +100,14 @@
 
 (capi:define-interface my-app-interface (capi:cocoa-default-application-interface)
   ()
-  (:menus 
+  (:menus
    (edit-menu
     "Edit"
     (undo-component standard-edit-component selection-component)
     :callback-type :interface)
    (window-menu
     "Window"
-    (("Close Window" 
+    (("Close Window"
       :accelerator "accelerator-w"
       :enabled-function 'close-active-screen-enabled
       :callback 'close-active-screen
@@ -124,7 +124,7 @@
    (selection-component
     :component
     (("Select All" :callback 'capi:active-pane-select-all)))
-   
+
    (undo-component
     :component
     (("Undo" :data :undo
