@@ -32,6 +32,13 @@
      :adjust :left
      :width (character ,(max (+ (length type) 5) col2)))))
 
+;; doesn't work, seems to cause segfaults, but would be a cool feature :(
+(defun go-to-console (interface stack)
+  (with-pp (interface)
+    (mfa-tool::open-url
+     (format nil "https://us-west-2.console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/stackinfo?stackId=~a"
+             (quri:url-encode (daydreamer.aws-result:stack-id stack))))))
+
 (capi:define-interface stack-interface (capi:interface mfa-tool.stack-store:stack-store)
   ()
   (:panes
@@ -59,6 +66,13 @@
                    :callback-type :interface
                    :callback (lambda (store)
                                (mfa-tool.store:dispatch store :refresh)))
+   #+(or)
+   (open-web-console capi:push-button
+                     :text "Open"
+                     :callback-type :interface
+                     :callback (lambda (store)
+                                 (go-to-console
+                                  (mfa-tool.stack-store:selected-stack store))))
    (status-display capi:display-pane
                    :background :transparent
                    :reader status-display
