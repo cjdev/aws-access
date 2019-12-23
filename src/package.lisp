@@ -11,4 +11,6 @@
                 #:cj-organization-role-arn
                 #:cj-developer-role
                 #:arn-for)
-  (:export :main))
+  (:export :main
+   :url
+           :sts-result-handler))

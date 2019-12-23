@@ -67,17 +67,23 @@
 
 (defgeneric execute-action (action interface)
   (:method ((action (eql :|Open Web Console|)) (interface mfa-tool))
-    (open-url (signin-url interface)))
+    (let* ((credentials (current-credentials interface))
+           (parser (fw.lu:new 'sts-result-handler credentials))
+           (federation-url (url parser))
+           (signin-token (gethash "SigninToken"
+                                  (yason:parse
+                                   (dexador:get federation-url)))))
+      (open-url (url-from-signin-token signin-token))))
   (:method ((action (eql :|Authorize iTerm|)) (interface mfa-tool))
-    (uiop:run-program (format nil "osascript '~a'" 
-                              (probe-file 
-                               (merge-pathnames (make-pathname :name "AuthorizeShell" :type "scpt") 
+    (uiop:run-program (format nil "osascript '~a'"
+                              (probe-file
+                               (merge-pathnames (make-pathname :name "AuthorizeShell" :type "scpt")
                                                 (bundle-resource-root))))))
   (:method ((action (eql :|Cloudformation Stacks|)) (interface mfa-tool))
-   (let ((stack-interface (make-instance 'mfa-tool.stack:stack-interface
-                                         :credentials (current-credentials interface))))
-     (mfa-tool.store:dispatch stack-interface :|Get Stacks|)
-     (capi:display stack-interface)))
+    (let ((stack-interface (make-instance 'mfa-tool.stack:stack-interface
+                                          :credentials (current-credentials interface))))
+      (mfa-tool.store:dispatch stack-interface :|Get Stacks|)
+      (capi:display stack-interface)))
   (:method ((action (eql :|Lisp REPL|)) (interface mfa-tool))
     (capi:contain (make-instance 'capi:listener-pane)
                   :best-width 1280
@@ -171,11 +177,11 @@
         *accounts* (reprocess-accounts (load-accounts accounts))
         aws:*session* (mfa-tool.credential-provider:make-aws-session))
   (ubiquitous:restore :cj.mfa-tool)
-  (interface :default-account 
+  (interface :default-account
              (ubiquitous:value :default-account)))
 
 (defun start-in-repl
-    (&optional (accounts (asdf:system-relative-pathname :aws-access "accounts"
+    (&optional (accounts (asdf:system-relative-pathname :aws-access "assets/accounts"
                                                         :type "json")))
   (run accounts))
 

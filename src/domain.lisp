@@ -33,21 +33,24 @@
                                     (yason:encode params s))
                                   :space-to-plus t)))
 
-(cells:defmodel 
-    sts-result-handler ()
-  ((api-result :initarg :api-result :accessor api-result :initform (cells:c-in nil))
-   (credentials :reader credentials
-                :initform (cells:c? (serapeum:assocdr "Credentials" (^api-result)
-                                                      :test 'equal)))
+(cells:defmodel sts-result-handler ()
+  ((credentials :accessor credentials :initarg :credentials
+                :initform (cells:c-in nil))
    (session-id :reader session-id
-               :initform (cells:c? (serapeum:assocadr "AccessKeyId" (^credentials)
-                                                      :test 'equal)))
+               :initform (cells:c? (typecase (^credentials)
+                                     (aws:credentials (aws-sdk/credentials/base:credentials-access-key-id (^credentials)))
+                                     (cons (serapeum:assocadr "AccessKeyId" (^credentials)
+                                                              :test 'equal)))))
    (session-key :reader session-key 
-                :initform (cells:c? (serapeum:assocadr "SecretAccessKey" (^credentials)
-                                                       :test 'equal)))
+                :initform (cells:c? (typecase (^credentials)
+                                      (aws:credentials (aws-sdk/credentials/base:credentials-secret-access-key (^credentials)))
+                                      (cons (serapeum:assocadr "SecretAccessKey" (^credentials)
+                                                               :test 'equal)))))
    (session-token :reader session-token 
-                  :initform (cells:c? (serapeum:assocadr "SessionToken" (^credentials)
-                                                         :test 'equal)))
+                  :initform (cells:c? (typecase (^credentials)
+                                        (aws:credentials (aws-sdk/credentials/base:credentials-session-token (^credentials)))
+                                        (cons (serapeum:assocadr "SessionToken" (^credentials)
+                                                                 :test 'equal)))))
    (url-params :reader url-params 
                :initform (cells:c? (fw.lu:alist-string-hash-table
                                     `(("sessionId" . ,(^session-id))
@@ -93,8 +96,10 @@
                                      :test-function (lambda (c)
                                                       (and (find-restart 'continue)
                                                            (typep c 'aws:no-credentials)))))
-    (let* ((api-result (cells:c-in (do-auth user role token)))
-           (parser (make-instance 'sts-result-handler :api-result api-result))
+    (let* ((api-result (do-auth user role token))
+           (parser (make-instance 'sts-result-handler
+                                  :credentials (serapeum:assocdr "Credentials" api-result
+                                                                 :test 'equal)))
            (federation-url (url parser))
            (signin-token (gethash "SigninToken" 
                                   (yason:parse

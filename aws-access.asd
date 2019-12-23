@@ -11,6 +11,8 @@
                  :aws-sdk/services/sts
                  :cells
                  :fset
+                 :dexador
+                 :quri
                  :cxml
                  :daydreamer
                  :fwoar-lisputils
