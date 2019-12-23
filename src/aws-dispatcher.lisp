@@ -1,6 +1,7 @@
 (defpackage :mfa-tool.aws-dispatcher
   (:use :cl)
-  (:export #:aws-dispatcher #:update-stacks #:select-stack #:stacks #:stack))
+  (:export #:aws-dispatcher #:update-stacks #:select-stack #:stacks #:stack
+           #:put-stack))
 (in-package :mfa-tool.aws-dispatcher)
 
 (defclass aws-dispatcher ()
@@ -12,6 +13,20 @@
    :region "us-east-1"
    :credentials (error "AWS-DISPATCHER requires a :CREDENTIALS initarg")))
 
+(defmacro defprint-slots (class slots)
+  `(defmethod print-object ((o ,class) s)
+     (with-slots ,slots o
+       (print-unreadable-object (o s :type t :identity t)
+         (format s "~@{~s~^, ~}"
+                 ,@slots)))))
+(defprint-slots daydreamer.aws-result:stack
+    (daydreamer.aws-result::%stack-name))
+
+(defclass put-stack ()
+  ((%stack :reader stack :initarg :stack)))
+(defun put-stack (stack)
+  (fw.lu:new 'put-stack stack))
+
 (defclass update-stacks ()
   ((%stacks :initarg :stacks :reader stacks)))
 (defun update-stacks (stacks)
@@ -19,6 +34,7 @@
 
 (defclass select-stack ()
   ((%stacks :initarg :stack :reader stack)))
+(defprint-slots select-stack (%stacks))
 
 (defun select-stack (stack)
   (fw.lu:new 'select-stack stack))
