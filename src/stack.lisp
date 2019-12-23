@@ -54,6 +54,11 @@
                   :selection-callback (dispatch-with-action-creator 'mfa-tool.aws-dispatcher:select-stack)
                   :callback-type :interface-data)
 
+   (refresh-status capi:push-button
+                   :text "Refresh"
+                   :callback-type :interface
+                   :callback (lambda (store)
+                               (mfa-tool.store:dispatch store :refresh)))
    (status-display capi:display-pane
                    :background :transparent
                    :reader status-display
@@ -100,8 +105,14 @@
                '(region-chooser
                  stack-chooser)
                :visible-max-width '(character 35))
+   (status-layout capi:row-layout
+                  '(status-display
+                    nil
+                    #+(or)open-web-console
+                    refresh-status)
+                  :adjust :center)
    (attribute-layout capi:column-layout
-                     '(status-display
+                     '(status-layout
                        parameters-display
                        outputs-display))
    (main-layout capi:row-layout
@@ -115,8 +126,9 @@
 (defmethod mfa-tool.store:execute :after ((interface stack-interface) (_ mfa-tool.aws-dispatcher:update-stacks))
   (with-pp (interface)
     (with-accessors ((stack-chooser stack-chooser)) interface
-      (setf (capi:collection-items stack-chooser)
-            (mfa-tool.stack-store:available-stacks interface)))))
+      (setf (capi:collection-items stack-chooser) (mfa-tool.stack-store:available-stacks interface)
+            (capi:choice-selected-item
+             (stack-chooser interface)) (mfa-tool.stack-store:selected-stack interface)))))
 
 (defun max-widths (cols)
   (loop for (col1 col2) in cols
@@ -135,6 +147,9 @@
       (capi:modify-multi-column-list-panel-columns
        parameters-display :columns (apply 'get-output-columns "Parameter" (max-widths parameters)))
       
+      (when (not (eq (capi:choice-selected-item (stack-chooser interface))
+                     (mfa-tool.aws-dispatcher:stack _)))
+        (setf (capi:choice-selected-item (stack-chooser interface)) (mfa-tool.stack-store:selected-stack interface)))
       (setf (capi:display-pane-text status-display)
             (format nil "~a: ~/mfa-tool.stack:format-stack-status/"
                     (daydreamer.aws-result:stack-name selected-stack)

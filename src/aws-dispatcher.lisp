@@ -1,7 +1,8 @@
 (defpackage :mfa-tool.aws-dispatcher
   (:use :cl)
   (:export #:aws-dispatcher #:update-stacks #:select-stack #:stacks #:stack
-           #:put-stack))
+           #:put-stack
+           #:refresh-stack))
 (in-package :mfa-tool.aws-dispatcher)
 
 (defclass aws-dispatcher ()
@@ -21,6 +22,12 @@
                  ,@slots)))))
 (defprint-slots daydreamer.aws-result:stack
     (daydreamer.aws-result::%stack-name))
+
+(defclass refresh-stack ()
+  ((%stack :reader stack :initarg :stack)))
+(defprint-slots refresh-stack (%stack))
+(defun refresh-stack (stack)
+  (fw.lu:new 'refresh-stack stack))
 
 (defclass put-stack ()
   ((%stack :reader stack :initarg :stack)))
@@ -54,6 +61,16 @@
 
 (defmethod mfa-tool.store:dispatch :after ((store aws-dispatcher) (action update-region))
   (mfa-tool.store:dispatch store :|Get Stacks|))
+
+(defmethod mfa-tool.store:dispatch :after ((store aws-dispatcher) (action refresh-stack))
+  (let ((new-value (daydreamer.aws-result:extract-stack
+                    (car
+                     (daydreamer.aws-result:extract-list
+                      (cdar
+                       (aws/cloudformation:describe-stacks
+                        :stack-name (daydreamer.aws-result:stack-name
+                                     (stack action)))))))))
+    (mfa-tool.store:dispatch store (put-stack new-value))))
 
 (defmethod mfa-tool.store:dispatch :after ((store aws-dispatcher) (action (eql :|Get Stacks|)))
   (bt:make-thread

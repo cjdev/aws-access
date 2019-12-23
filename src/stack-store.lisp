@@ -25,9 +25,31 @@
            output))
 
 (defmethod mfa-tool.store:dispatch :after ((store stack-store)
+                                           (action (eql :refresh)))
+  (mfa-tool.store:dispatch store
+                           (mfa-tool.aws-dispatcher:refresh-stack
+                            (mfa-tool.stack-store:selected-stack
+                             store))))
+
+(defmethod mfa-tool.store:dispatch :after ((store stack-store)
+                                           (action mfa-tool.aws-dispatcher:put-stack))
+  (let* ((stack (mfa-tool.aws-dispatcher:stack action))
+         (old-stack (find (daydreamer.aws-result:stack-name stack)
+                          (available-stacks store)
+                          :key 'daydreamer.aws-result:stack-name
+                          :test 'equal))
+         (new-stacks (substitute stack old-stack (available-stacks store))))
+    (mfa-tool.store:dispatch store (mfa-tool.aws-dispatcher:select-stack stack))
+    (mfa-tool.store:dispatch store (mfa-tool.aws-dispatcher:update-stacks new-stacks))))
+
+(defmethod mfa-tool.store:dispatch :after ((store stack-store)
                                            (action mfa-tool.aws-dispatcher:update-stacks))
-  (alexandria:when-let ((stack (car (mfa-tool.aws-dispatcher:stacks action))))
-    (mfa-tool.store:dispatch store (mfa-tool.aws-dispatcher:select-stack stack))))
+  (when (not (selected-stack store))
+    (alexandria:when-let ((stack (car (mfa-tool.aws-dispatcher:stacks action))))
+      (mfa-tool.store:dispatch store (mfa-tool.aws-dispatcher:select-stack stack)))))
+
+(defmethod mfa-tool.store:execute ((store stack-store) (action (eql :refresh)))
+  )
 
 (defmethod mfa-tool.store:execute ((store stack-store) (action mfa-tool.aws-dispatcher:update-stacks))
   (setf (available-stacks store) (sort (mfa-tool.aws-dispatcher:stacks action)
@@ -41,3 +63,6 @@
           (parameters store) (mapcar 'parameter-columns (daydreamer.aws-result:parameters stack))
 
           (outputs store) (mapcar 'output-columns (daydreamer.aws-result:outputs stack)))))
+
+(defmethod mfa-tool.store:execute ((store stack-store) (action mfa-tool.aws-dispatcher:put-stack))
+  )
