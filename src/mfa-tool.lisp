@@ -11,10 +11,12 @@
 
 (defun current-account (interface)
   (cdr (capi:choice-selected-item (account-selector interface))))
+(defun current-role (interface)
+  (capi:choice-selected-item (role-selector interface)))
 
 (defun credentials-for-account (interface account)
-   (gethash account 
-            (assumed-credentials interface)))
+  (gethash account
+           (assumed-credentials interface)))
 (defun (setf credentials-for-account) (new-credentials interface account)
   (setf (gethash account
                  (assumed-credentials interface))
@@ -69,7 +71,9 @@
                                           (change-mfa-token new-code))
                                    (capi:abort-callback)))))))
           (authenticate user-name
-                        (cj-developer-role account)
+                        (ecase (current-role interface)
+                          (:|Developer Role| (cj-developer-role account))
+                          (:|Provisioner Role| (cj-provisioner-role account)))
                         token))
       (with-open-file (stream (make-pathname :name ""
                                              :type "cj-aws"

@@ -17,7 +17,10 @@
                 (aws/sts:assume-role :role-arn role-arn
                                      :role-session-name (session-name)
                                      :serial-number mfa-serial-number
-                                     :duration-seconds #.(* 12 60 60)
+                                     :duration-seconds (if (eql (mfa-tool.aws-utils:session-duration role)
+                                                                :max)
+                                                           #.(* 12 60 60)
+                                                           (mfa-tool.aws-utils:session-duration role))
                                      :token-code token))
     (change-mfa-token (new-token)
                       :interactive read-new-mfa-token

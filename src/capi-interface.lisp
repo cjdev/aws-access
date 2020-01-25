@@ -30,6 +30,10 @@
                      :selection-callback 'account-selected
                      :callback-type :data
                      :reader account-selector)
+   (role-selector capi:option-pane
+                  :items '(:|Developer Role| :|Provisioner Role|)
+                  :reader role-selector
+                  :selected-item keyword:|Developer Role|)
    (action-buttons capi:push-button-panel
                    :items '(:|Open Web Console|
                             :|Authorize iTerm|
@@ -46,6 +50,7 @@
                     go-button))
    (data-layout  capi:column-layout
                  '(account-selector
+                   role-selector
                    :separator
                    user-input
                    mfa-input
