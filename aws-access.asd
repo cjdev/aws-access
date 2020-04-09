@@ -28,6 +28,7 @@
                                (:file "utils")
                                (:file "capi-utils")
                                (:file "pprint-setup")
+                               (:file "editor-color-theme")
                                (:file "store")
                                (:file "aws-dispatcher")
                                (:file "aws-utils")

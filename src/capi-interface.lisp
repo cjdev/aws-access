@@ -178,6 +178,7 @@
                                                              'capi:destroy interface))))))
 
 (defun run (&optional accounts)
+  (cl+ssl:reload)
   (setf *print-readably* nil
         *accounts* (reprocess-accounts (load-accounts accounts))
         aws:*session* (mfa-tool.credential-provider:make-aws-session))
@@ -206,6 +207,7 @@
   (abort))
 
 (defun main ()
+  (mfa-tool.editor-color-theme:color-theme "zenburn" nil)
   (mfa-tool.credential-provider:setup-default-chain)
   (mfa-tool.pprint-setup:setup-pprint)
   (setf *debugger-hook* 'debugging)
