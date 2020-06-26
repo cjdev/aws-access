@@ -1,11 +1,34 @@
 (in-package :mfa-tool)
 
-(defun open-url (url)
-  (capi:contain (make-instance 'capi:browser-pane
-                               :url url)
-                :title "Management Console"
-                :best-width 1280
-                :best-height 800)
+(capi:define-interface browser-ui ()
+  ((url :initarg :url :reader url))
+  (:panes (brows capi:browser-pane
+                 :url url
+
+                 :navigate-complete-callback
+                 (lambda (pane url _)
+                   (declare (ignore url _))
+                   (capi:apply-in-pane-process-if-alive
+                       pane #'(setf capi:interface-title)
+                       (or (capi:browser-pane-title pane) "<no title>")
+                       capi:interface))
+
+                 :new-window-callback
+                 (lambda (pane url &key &allow-other-keys)
+                   (declare (ignore pane))
+                   (open-url url)
+                   nil)))
+  (:layouts (main-layout capi:row-layout '(brows)))
+  (:default-initargs
+   :layout 'main-layout
+   :title "Management Console"
+   :best-width 1280
+   :best-height 800))
+
+(defun open-url (url &optional parnt)
+  (if parnt
+      (capi:display (make-instance 'browser-ui :url url))
+      (capi:display (make-instance 'browser-ui :url url)))
   #+(or)
   (let* ((history (make-instance 'capi:list-panel
                                  :items (list (make-instance 'capi:item
