@@ -4,6 +4,9 @@
   (setf (ubiquitous:value :default-account)
         (cdr account)))
 
+(defun region-selected (region)
+  (setf (ubiquitous:value :default-region)
+        region))
 (defparameter *developer-p* (equal "elangley" (uiop/os:getenv "USER")))
 
 (defgeneric assumed-credentials (store))
@@ -90,6 +93,8 @@
                   (session-token creds))))
       (capi:set-button-panel-enabled-items (slot-value interface 'action-buttons)
                                            :set t)
+      (setf (capi:button-enabled (slot-value interface 'open-console-button))
+            t)
       (setf (credentials-for-account interface account) (session-credentials creds)
             (signin-url interface) (url-from-signin-token signin-token)))))
 
@@ -118,14 +123,13 @@
   (let ((accounts (gethash "Accounts" accounts))
         (result ()))
     (mapc (lambda (account)
-            (push (cons (format nil "~a: ~a (~a)" 
+            (push (cons (format nil "~a: ~a (~a)"
                                 (gethash "Name" account)
                                 (gethash "Id" account)
                                 (gethash "Type" account))
                         (gethash "Id" account))
                   result))
           accounts)
-    (coerce (sort result 'string-lessp 
+    (coerce (sort result 'string-lessp
                   :key 'car)
             'list)))
-

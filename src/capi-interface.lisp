@@ -3,6 +3,7 @@
 (capi:define-interface mfa-tool ()
   ((assumed-credentials :accessor assumed-credentials :initform (make-hash-table :test 'equal))
    (%default-account :initarg :default-account :reader default-account)
+   (%default-region :initarg :default-region :reader default-region)
    (%signin-url :accessor signin-url))
   (:panes
    (output-pane capi:collector-pane :reader output
@@ -37,12 +38,16 @@
    (region-selector capi:option-pane
                     :reader region-selector
                     ;; :external-max-width '(character 35)
-                    :items (list "us-east-1" "us-east-2"
-                                 "us-west-1" "us-west-2"
-                                 "ca-central-1"
-                                 "eu-central-1"
-                                 "eu-west-1" "eu-west-2"))
+                    :selection-callback 'region-selected
+                    :callback-type :data
+                    :selected-item (or %default-region :|us-east-1|)
+                    :items (list :|us-east-1| :|us-east-2|
+                                 :|us-west-1| :|us-west-2|
+                                 :|ca-central-1|
+                                 :|eu-central-1|
+                                 :|eu-west-1| :|eu-west-2|))
    (open-console-button capi:push-button
+                        :enabled nil
                         :selection-callback 'execute-action
                         :callback-type :data-interface
                         :data :|Open Web Console|)
@@ -111,7 +116,7 @@
                   :best-width 1280
                   :best-height 800)))
 
-(defun interface (&rest args &key default-account)
+(defun interface (&rest args &key default-account default-region)
   (declare (ignore default-account))
   (let ((interface (apply 'make-instance 'mfa-tool args)))
     (setf (capi:pane-initial-focus interface)
@@ -200,8 +205,10 @@
         *accounts* (reprocess-accounts (load-accounts accounts))
         aws:*session* (mfa-tool.credential-provider:make-aws-session))
   (ubiquitous:restore :cj.mfa-tool)
-  (interface :default-account
-             (ubiquitous:value :default-account)))
+  (interface
+   :default-account (ubiquitous:value :default-account)
+   :default-region (or (ubiquitous:value :default-region)
+                       :|us-east-1|)))
 
 (defun start-in-repl
     (&optional (accounts (asdf:system-relative-pathname :aws-access "assets/accounts"
