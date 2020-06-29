@@ -41,20 +41,26 @@
                 :initform (cells:c-in nil))
    (session-id :reader session-id
                :initform (cells:c? (typecase (^credentials)
-                                     (aws:credentials (aws-sdk/credentials/base:credentials-access-key-id (^credentials)))
+                                     (aws:credentials
+                                      (aws-sdk/credentials/base:credentials-access-key-id
+                                       (^credentials)))
                                      (cons (serapeum:assocadr "AccessKeyId" (^credentials)
                                                               :test 'equal)))))
-   (session-key :reader session-key 
+   (session-key :reader session-key
                 :initform (cells:c? (typecase (^credentials)
-                                      (aws:credentials (aws-sdk/credentials/base:credentials-secret-access-key (^credentials)))
+                                      (aws:credentials
+                                       (aws-sdk/credentials/base:credentials-secret-access-key
+                                        (^credentials)))
                                       (cons (serapeum:assocadr "SecretAccessKey" (^credentials)
                                                                :test 'equal)))))
-   (session-token :reader session-token 
+   (session-token :reader session-token
                   :initform (cells:c? (typecase (^credentials)
-                                        (aws:credentials (aws-sdk/credentials/base:credentials-session-token (^credentials)))
+                                        (aws:credentials
+                                         (aws-sdk/credentials/base:credentials-session-token
+                                          (^credentials)))
                                         (cons (serapeum:assocadr "SessionToken" (^credentials)
                                                                  :test 'equal)))))
-   (url-params :reader url-params 
+   (url-params :reader url-params
                :initform (cells:c? (fw.lu:alist-string-hash-table
                                     `(("sessionId" . ,(^session-id))
                                       ("sessionKey" . ,(^session-key))
@@ -69,8 +75,13 @@
      :secret-access-key (session-key source)
      :session-token (session-token source))))
 
-(defun url-from-signin-token (signin-token)
-  (format nil "https://signin.aws.amazon.com/federation?Action=login&Destination=https%3A%2F%2Fconsole.aws.amazon.com&SigninToken=~a"
+(defun url-from-signin-token (signin-token &optional (region "us-west-2"))
+  (format nil #.(concatenate 'string
+                             "https://signin.aws.amazon.com/federation?"
+                             "Action=login&"
+                             "Destination=https%3A%2F%2F~a.console.aws.amazon.com&"
+                             "SigninToken=~a")
+          region
           signin-token))
 
 (defun read-new-aws-credentials ()
@@ -104,7 +115,7 @@
                                   :credentials (serapeum:assocdr "Credentials" api-result
                                                                  :test 'equal)))
            (federation-url (url parser))
-           (signin-token (gethash "SigninToken" 
+           (signin-token (gethash "SigninToken"
                                   (yason:parse
                                    (dexador:get federation-url)))))
       (values signin-token

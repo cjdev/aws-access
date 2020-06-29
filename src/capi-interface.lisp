@@ -34,9 +34,20 @@
                   :items '(:|Developer Role| :|Provisioner Role|)
                   :reader role-selector
                   :selected-item keyword:|Developer Role|)
+   (region-selector capi:option-pane
+                    :reader region-selector
+                    ;; :external-max-width '(character 35)
+                    :items (list "us-east-1" "us-east-2"
+                                 "us-west-1" "us-west-2"
+                                 "ca-central-1"
+                                 "eu-central-1"
+                                 "eu-west-1" "eu-west-2"))
+   (open-console-button capi:push-button
+                        :selection-callback 'execute-action
+                        :callback-type :data-interface
+                        :data :|Open Web Console|)
    (action-buttons capi:push-button-panel
-                   :items '(:|Open Web Console|
-                            :|Authorize iTerm|
+                   :items '(:|Authorize iTerm|
                             :|Cloudformation Stacks|)
                    :selection-callback 'execute-action
                    :callback-type :data-interface)
@@ -58,8 +69,12 @@
    (action-layout capi:row-layout
                   `(nil
                     action-buttons))
+   (webconsole-layout capi:row-layout
+                      '(region-selector
+                        open-console-button))
    (right-layout capi:column-layout
                  '(output-pane
+                   webconsole-layout
                    action-layout))
    (main-layout capi:row-layout
                 '(data-layout
@@ -78,7 +93,9 @@
            (signin-token (gethash "SigninToken"
                                   (yason:parse
                                    (dexador:get federation-url)))))
-      (open-url (url-from-signin-token signin-token))))
+      (open-url (url-from-signin-token signin-token
+                                       (capi:choice-selected-item
+                                        (region-selector interface))))))
   (:method ((action (eql :|Authorize iTerm|)) (interface mfa-tool))
     (uiop:run-program (format nil "osascript '~a'"
                               (probe-file
