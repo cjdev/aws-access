@@ -215,3 +215,12 @@
   (show-splash)
   (princ (user-homedir-pathname) *standard-output*)
   (run))
+
+(defun cl+ssl::input-wait (_ __ ___)
+  (declare (ignore _ __ ___))
+  (format t "~&Can't wait for input intelligently, sleeping...~%")
+  (sleep 0.5))
+(defun cl+ssl::output-wait (_ __ ___)
+  (declare (ignore _ __ ___))
+  (format t "~&Can't wait for output intelligently, sleeping...~%")
+  (sleep 0.5))
