@@ -7,6 +7,7 @@
 (defun region-selected (region)
   (setf (ubiquitous:value :default-region)
         region))
+
 (defparameter *developer-p* (equal "elangley" (uiop/os:getenv "USER")))
 
 (defgeneric assumed-credentials (store))

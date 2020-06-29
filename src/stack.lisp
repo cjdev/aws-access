@@ -25,10 +25,10 @@
          stream))
 
 (defun get-output-columns (type col1 col2)
-  `((:title ,(format nil "~a Name" type) 
+  `((:title ,(format nil "~a Name" type)
      :adjust :right
      :width (character ,(max (+ (length type) 5) col1)))
-    (:title "Value" 
+    (:title "Value"
      :adjust :left
      :width (character ,(max (+ (length type) 5) col2)))))
 
@@ -45,11 +45,12 @@
    (region-chooser capi:option-pane
                    :reader region-chooser
                    ;; :external-max-width '(character 35)
-                   :items (list "us-east-1" "us-east-2"
-                                "us-west-1" "us-west-2"
-                                "ca-central-1"
-                                "eu-central-1"
-                                "eu-west-1" "eu-west-2")
+                   :items (list :|us-east-1| :|us-east-2|
+                                :|us-west-1| :|us-west-2|
+                                :|ca-central-1|
+                                :|eu-central-1|
+                                :|eu-west-1| :|eu-west-2|)
+                   :selected-item (mfa-tool.aws-dispatcher::region capi:interface)
                    :selection-callback (dispatch-with-action-creator 'mfa-tool.aws-dispatcher::update-region)
                    :callback-type :interface-data)
 
@@ -160,7 +161,7 @@
        outputs-display :columns (apply 'get-output-columns "Output" (max-widths outputs)))
       (capi:modify-multi-column-list-panel-columns
        parameters-display :columns (apply 'get-output-columns "Parameter" (max-widths parameters)))
-      
+
       (when (not (eq (capi:choice-selected-item (stack-chooser interface))
                      (mfa-tool.aws-dispatcher:stack _)))
         (setf (capi:choice-selected-item (stack-chooser interface)) (mfa-tool.stack-store:selected-stack interface)))
@@ -170,4 +171,3 @@
                     selected-stack)
             (capi:collection-items parameters-display) parameters
             (capi:collection-items outputs-display) outputs))))
-

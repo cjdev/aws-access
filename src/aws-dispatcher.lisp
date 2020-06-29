@@ -11,7 +11,7 @@
    (%credentials :reader credentials
                  :initarg :credentials))
   (:default-initargs
-   :region "us-east-1"
+   :region :|us-east-1|
    :credentials (error "AWS-DISPATCHER requires a :CREDENTIALS initarg")))
 
 (defmacro defprint-slots (class slots)

@@ -108,9 +108,11 @@
                                                 (bundle-resource-root))))))
   (:method ((action (eql :|Cloudformation Stacks|)) (interface mfa-tool))
     (let ((stack-interface (make-instance 'mfa-tool.stack:stack-interface
-                                          :credentials (current-credentials interface))))
-      (mfa-tool.store:dispatch stack-interface :|Get Stacks|)
-      (capi:display stack-interface)))
+                                          :credentials (current-credentials interface)
+                                          :region (capi:choice-selected-item
+                                                   (region-selector interface)))))
+      (prog1 (capi:display stack-interface)
+        (mfa-tool.store:dispatch stack-interface :|Get Stacks|))))
   (:method ((action (eql :|Lisp REPL|)) (interface mfa-tool))
     (capi:contain (make-instance 'capi:listener-pane)
                   :best-width 1280
