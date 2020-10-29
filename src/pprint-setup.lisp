@@ -6,7 +6,7 @@
 
 (in-package :mfa-tool.pprint-setup)
 
-(defparameter *old-pprint-dispatch* *print-pprint-dispatch*)
+(defvar *old-pprint-dispatch* *print-pprint-dispatch*)
 
 (defun pprint-hashtable (s hash-table)
   (pprint-logical-block (s nil)
